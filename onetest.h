@@ -1,25 +1,67 @@
 #ifndef ONETEST_H
 #define ONETEST_H
 
+#include <string.h> 
 #include <stdio.h> 
-extern int onetest_test_counter; 
+#include <stdlib.h> 
+extern int onetest_test_counter;
 
-#define call(func) { \
-    onetest_test_counter++; \
-    int ret = func(); \
-    if (ret) { \
-        printf("\x1b[31m[%d] %s\x1b[0m\n", onetest_test_counter, #func); \
-    } else { \
-        printf("\x1b[32m[%d] %s\x1b[0m\n", onetest_test_counter, #func); \
-    } \
-} 
+#define call(func, name) { test_append(func, name); }
+#define ONETEST_STR_LEN 48 
 
 #define assert_eq(x, y) if (x != y) { return 1; } 
 #define assert_ne(x, y) if (x == y) { return 1; } 
+
+typedef int (*func_ptr)(void); 
+typedef struct {
+    size_t size;
+    size_t cap;
+    func_ptr* items;    
+    char** names; 
+} test_array;
+
+void onetest_init(void);
+void onetest_exec(void);
  
 #ifdef ONETEST_IMPLEMENTATION
+test_array tests; 
 
-int onetest_test_counter = 0; 
+void onetest_init(void) {
+    tests.size = 0; 
+    tests.cap = 8; 
+    tests.items = malloc(sizeof(func_ptr) * 8);
+    tests.names = malloc(sizeof(char) * ONETEST_STR_LEN * 8); 
+} 
+
+void test_append(func_ptr f, char* name) {
+    if (tests.size == tests.cap) {
+        tests.items = realloc(tests.items, tests.cap * 2 * sizeof(func_ptr));
+        tests.names = realloc(tests.names, tests.cap * 2 * sizeof(char) * ONETEST_STR_LEN); 
+        tests.cap = tests.cap * 2;
+    }
+
+    tests.items[tests.size] = f;
+    tests.names[tests.size] = name; 
+    tests.size++; 
+} 
+
+void onetest_exec(void) { 
+    int failed = 0;
+    const char* fail = "\x1b[41mFailed\x1b[0m";
+    const char* succeed = "\x1b[42mPassed\x1b[0m";
+
+    for (size_t i = 0; i < tests.size; i++) {
+        int ret = tests.items[i]();
+        if (ret) { failed++; }        
+        printf("%s...%s\n", tests.names[i], (ret ? fail : succeed));
+    } 
+
+    free(tests.items);
+    free(tests.names); 
+    tests.items = NULL;
+    tests.names = NULL; 
+    tests.size = 0;
+}
 
 #endif // ONETEST_IMPLEMENTATION
 #endif // ONETEST_H 
