@@ -1,8 +1,6 @@
 #ifndef ONETEST_H
 #define ONETEST_H
 
-#include <string.h> 
-#include <stdio.h> 
 #include <stdlib.h> 
 extern int onetest_test_counter;
 
@@ -24,6 +22,10 @@ void onetest_init(void);
 void onetest_exec(void);
  
 #ifdef ONETEST_IMPLEMENTATION
+#include <stdio.h> 
+#include <string.h> 
+#include <sys/ioctl.h>
+
 test_array tests; 
 
 void onetest_init(void) {
@@ -45,6 +47,12 @@ void test_append(func_ptr f, char* name) {
     tests.size++; 
 } 
 
+size_t get_term_width(void) {
+    struct winsize w;
+    ioctl(0, TIOCGWINSZ, &w);
+    return w.ws_col;
+} 
+
 void onetest_exec(void) { 
     int failed = 0;
     const char* fail = "\x1b[41mFailed\x1b[0m";
@@ -52,8 +60,25 @@ void onetest_exec(void) {
 
     for (size_t i = 0; i < tests.size; i++) {
         int ret = tests.items[i]();
-        if (ret) { failed++; }        
-        printf("%s...%s\n", tests.names[i], (ret ? fail : succeed));
+
+        // +9 because that's the size of the ansi escape codes above
+        // +1 for \0 for printing 
+        size_t term_width = get_term_width() + 9;
+        char* out = malloc(sizeof(char) * term_width); 
+        out = memset(out, '.', term_width); 
+        out = strncpy(out, tests.names[i], strlen(tests.names[i])); 
+        int dest = term_width - 15; 
+
+        if (ret) {
+            failed++;
+            strcpy(out + dest, fail); 
+        } else {
+            strcpy(out + dest, succeed); 
+        } 
+
+        out[term_width] = '\0'; 
+        printf("%s\n", out);
+        free(out); 
     } 
 
     free(tests.items);
