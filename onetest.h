@@ -33,9 +33,9 @@
  
 #define assert_str_ne(x, y) {\
     if (!(strcmp(x, y))) {\
-        error_str_append(x, "is equal to", y);\ 
+        error_str_append(x, "is equal to", y);\
         return 1;\
-    } \
+    }\
 }
 
 typedef int (*func_ptr)(void); 
@@ -110,12 +110,16 @@ void error_append(float x, char* mid_text, float y) {
 }
 
 void error_str_append(char* x, char* mid_text, char* y) {
-} 
+    if (e.size == e.cap) {
+        e.items = realloc(e.items, e.cap * 2 * sizeof(char) * ONETEST_STR_LEN); 
+        e.cap = e.cap * 2;
+    }
 
-size_t get_term_width(void) {
-    struct winsize w;
-    ioctl(0, TIOCGWINSZ, &w);
-    return w.ws_col;
+
+    char* out = malloc(sizeof(char) * ONETEST_STR_LEN);
+    snprintf(out, strlen(mid_text) + strlen(x) + strlen(y) + 2, "%s %s %s", x, mid_text, y);
+    e.items[e.size] = out;
+    e.size++;
 } 
 
 void onetest_exec(void) {
@@ -126,12 +130,11 @@ void onetest_exec(void) {
         int ret = tests.items[i]();
 
         // +9 because that's the size of the ansi escape codes above
-        // +1 for \0 for printing 
-        size_t term_width = get_term_width() + 9;
+        size_t term_width = 80 + 9; 
         char* out = malloc(sizeof(char) * term_width); 
         out = memset(out, '.', term_width); 
         out = strncpy(out, tests.names[i], strlen(tests.names[i])); 
-        int dest = term_width - 15; 
+        int dest = term_width - 15 - 1; 
 
         if (ret) {
             strcpy(out + dest, fail); 
