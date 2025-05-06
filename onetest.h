@@ -9,15 +9,22 @@
 }
 #define ONETEST_STR_LEN 48 
 
-#define assert_eq(x, y) if (x != y) { \
-    error_append(x, "does not equal", y); \
-    return 1;\
-} 
+#define assert_num_eq(x, y) {\
+    if (x != y) { \
+        error_append((float)x, "does not equal", (float)y); \
+        return 1;\
+    }\
+}
 
-#define assert_ne(x, y) if (x == y) { \
-    error_append(x, "is equal to", y); \
-    return 1;\
-} 
+#define assert_num_ne(x, y) {\
+    if (x == y) { \
+        error_append((float)x, "is equal to", (float)y); \
+        return 1;\
+    } \
+}
+
+#define assert_str_eq(x, y) {}
+#define assert_str_ne(x, y) {};
 
 typedef int (*func_ptr)(void); 
 typedef struct {
@@ -36,6 +43,7 @@ extern Errors e;
 
 void onetest_init(void);
 void onetest_exec(void);
+void error_append(float, char*, float); 
  
 #ifdef ONETEST_IMPLEMENTATION
 #include <stdio.h> 
@@ -65,14 +73,28 @@ void test_append(func_ptr f, char* name) {
 } 
 
 Errors new_errors(void) {
-    if (e.size) { free(e.items); }
+    if (e.size) {
+        for (size_t i = 0; i < e.size; i++) { free(e.items[i]); }
+        free(e.items); 
+    }
+
     e.size = 0;
     e.cap = 8;
     e.items = malloc(sizeof(char) * ONETEST_STR_LEN * 8); 
     return e; 
 } 
 
-void error_append() {
+void error_append(float x, char* mid_text, float y) {
+    if (e.size == e.cap) {
+        e.items = realloc(e.items, e.cap * 2 * sizeof(char) * ONETEST_STR_LEN); 
+        e.cap = e.cap * 2;
+    }
+
+
+    char* out = malloc(sizeof(char) * ONETEST_STR_LEN);
+    snprintf(out, strlen(mid_text) + 12, "%.2f %s %.2f", x, mid_text, y);
+    e.items[e.size] = out;
+    e.size++;
 }
 
 size_t get_term_width(void) {
@@ -105,6 +127,11 @@ void onetest_exec(void) {
         out[term_width] = '\0'; 
         printf("%s\n", out);
         free(out); 
+
+        // Print errors
+        for (size_t j = 0; j < e.size; j++) {
+            printf("\t%s\n", e.items[j]); 
+        } 
     } 
 
     free(tests.items);

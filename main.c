@@ -4,13 +4,13 @@
 #include "other.h" 
 
 int test_foo(void) {
-    assert_eq(5, 5);
-    assert_eq(4,5); 
+    assert_num_eq(5, 5);
+    assert_num_eq(4,5); 
     return 0; 
 } 
 
 int test_bar(void) {
-    assert_ne(4, 5);
+    assert_num_ne(4, 5);
     return 0;
 } 
 
