@@ -1,6 +1,7 @@
 #ifndef ONETEST_H
 #define ONETEST_H
 
+#include <string.h> 
 #include <stdlib.h>
 
 #define call(func, name) { \
@@ -23,8 +24,19 @@
     } \
 }
 
-#define assert_str_eq(x, y) {}
-#define assert_str_ne(x, y) {};
+#define assert_str_eq(x, y) {\
+    if (strcmp(x, y)) {\
+        error_str_append(x, "does not equal", y);\
+        return 1; \
+    } \
+}
+ 
+#define assert_str_ne(x, y) {\
+    if (!(strcmp(x, y))) {\
+        error_str_append(x, "is equal to", y);\ 
+        return 1;\
+    } \
+}
 
 typedef int (*func_ptr)(void); 
 typedef struct {
@@ -44,10 +56,10 @@ extern Errors e;
 void onetest_init(void);
 void onetest_exec(void);
 void error_append(float, char*, float); 
+void error_str_append(char*, char*, char*); 
  
 #ifdef ONETEST_IMPLEMENTATION
 #include <stdio.h> 
-#include <string.h> 
 #include <sys/ioctl.h>
 
 test_array tests; 
@@ -96,6 +108,9 @@ void error_append(float x, char* mid_text, float y) {
     e.items[e.size] = out;
     e.size++;
 }
+
+void error_str_append(char* x, char* mid_text, char* y) {
+} 
 
 size_t get_term_width(void) {
     struct winsize w;
