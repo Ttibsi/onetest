@@ -6,4 +6,5 @@ all:
 
 .PHONY: clean
 clean:
-	rm test
+	if [ -f test ]; then rm test; fi
+	if [ -f core ]; then rm core; fi
