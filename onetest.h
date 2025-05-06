@@ -12,28 +12,28 @@
 
 #define assert_num_eq(x, y) {\
     if (x != y) { \
-        error_append((float)x, "does not equal", (float)y); \
+        error_append(__FUNCTION__, __LINE__, (float)x, "does not equal", (float)y); \
         return 1;\
     }\
 }
 
 #define assert_num_ne(x, y) {\
     if (x == y) { \
-        error_append((float)x, "is equal to", (float)y); \
+        error_append(__FUNCTION__, __LINE__, (float)x, "is equal to", (float)y); \
         return 1;\
     } \
 }
 
 #define assert_str_eq(x, y) {\
     if (strcmp(x, y)) {\
-        error_str_append(x, "does not equal", y);\
+        error_str_append(__FUNCTION__, __LINE__, x, "does not equal", y);\
         return 1; \
     } \
 }
  
 #define assert_str_ne(x, y) {\
     if (!(strcmp(x, y))) {\
-        error_str_append(x, "is equal to", y);\
+        error_str_append(__FUNCTION__, __LINE__x, "is equal to", y);\
         return 1;\
     }\
 }
@@ -55,8 +55,8 @@ extern Errors e;
 
 void onetest_init(void);
 void onetest_exec(void);
-void error_append(float, char*, float); 
-void error_str_append(char*, char*, char*); 
+void error_append(const char*, int, float, char*, float); 
+void error_str_append(const char*, int, char*, char*, char*); 
  
 #ifdef ONETEST_IMPLEMENTATION
 #include <stdio.h> 
@@ -96,7 +96,7 @@ Errors new_errors(void) {
     return e; 
 } 
 
-void error_append(float x, char* mid_text, float y) {
+void error_append(const char* func, int line, float x, char* mid_text, float y) {
     if (e.size == e.cap) {
         e.items = realloc(e.items, e.cap * 2 * sizeof(char) * ONETEST_STR_LEN); 
         e.cap = e.cap * 2;
@@ -104,12 +104,12 @@ void error_append(float x, char* mid_text, float y) {
 
 
     char* out = malloc(sizeof(char) * ONETEST_STR_LEN);
-    snprintf(out, strlen(mid_text) + 12, "%.2f %s %.2f", x, mid_text, y);
+    snprintf(out, strlen(mid_text) + strlen(func) + 3 + 12, "%s:%d %.2f %s %.2f", func, line, x, mid_text, y);
     e.items[e.size] = out;
     e.size++;
 }
 
-void error_str_append(char* x, char* mid_text, char* y) {
+void error_str_append(const char* func, int line, char* x, char* mid_text, char* y) {
     if (e.size == e.cap) {
         e.items = realloc(e.items, e.cap * 2 * sizeof(char) * ONETEST_STR_LEN); 
         e.cap = e.cap * 2;
@@ -117,7 +117,7 @@ void error_str_append(char* x, char* mid_text, char* y) {
 
 
     char* out = malloc(sizeof(char) * ONETEST_STR_LEN);
-    snprintf(out, strlen(mid_text) + strlen(x) + strlen(y) + 5, "%s %s %s", x, mid_text, y);
+    snprintf(out, strlen(mid_text) + strlen(x) + strlen(y) + strlen(func) + 3 + 5, "%s:%d %s %s %s", func, line, x, mid_text, y);
     e.items[e.size] = out;
     e.size++;
 } 
