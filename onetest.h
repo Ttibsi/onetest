@@ -6,7 +6,6 @@
 
 #define call(func, name) { \
     test_append(func, name); \
-    e = new_errors(); \
 }
 #define ONETEST_STR_LEN 48 
 
@@ -127,6 +126,7 @@ void onetest_exec(void) {
     const char* succeed = "\x1b[42mPassed\x1b[0m";
 
     for (size_t i = 0; i < tests.size; i++) {
+        e = new_errors();
         int ret = tests.items[i]();
 
         // +9 because that's the size of the ansi escape codes above
