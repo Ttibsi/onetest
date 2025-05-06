@@ -117,7 +117,7 @@ void error_str_append(char* x, char* mid_text, char* y) {
 
 
     char* out = malloc(sizeof(char) * ONETEST_STR_LEN);
-    snprintf(out, strlen(mid_text) + strlen(x) + strlen(y) + 2, "%s %s %s", x, mid_text, y);
+    snprintf(out, strlen(mid_text) + strlen(x) + strlen(y) + 5, "%s %s %s", x, mid_text, y);
     e.items[e.size] = out;
     e.size++;
 } 
