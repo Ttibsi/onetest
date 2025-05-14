@@ -1,8 +1,8 @@
-CC := gcc
-CFLAGS := -Wall -Wextra -std=c99 -g 
+CC := clang++
+CFLAGS := -Wall -Wextra -std=c++20 -g 
 
 all:
-	$(CC) main.c other.c $(CFLAGS) -o test
+	$(CC) main.cpp $(CFLAGS) -o test
 
 .PHONY: clean
 clean:
