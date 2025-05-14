@@ -26,10 +26,12 @@ int assert_eq(T x, T y, ssl_t loc = std::source_location::current());
 template <typename T>
 int assert_ne(T x, T y, ssl_t loc = std::source_location::current());
 
-#ifdef ONETEST_IMPLEMENTATION
+#ifdef ONETEST_IMPLEMENTATION 
 #include <chrono> 
+#include <cstdlib> 
 #include <iostream>
 #include <format> 
+#include <string_view> 
 
 std::vector<std::string> errors;
  
@@ -52,6 +54,7 @@ int assert_ne(T x, T y, ssl_t loc) {
 }
 
 void onetest_exec(std::span<const Test> tests) {
+    bool ci = (std::getenv("CI") != nullptr);
     int fail_counter = 0;
     auto start = std::chrono::steady_clock::now();
     for (auto&& test: tests) {
@@ -61,11 +64,20 @@ void onetest_exec(std::span<const Test> tests) {
         test.ptr();
  
         const int intermediary = 79 - 6 - test.name.size();
-        const std::string result = errors.size() ? "\x1b[41mFailed\x1b[0m" : "\x1b[42mPassed\x1b[0m";
+        std::string result;
+        if (ci) {
+            result = (errors.size() ? "Failed" : "Passed"); 
+        } else { 
+            result = (errors.size() ? "\x1b[41mFailed\x1b[0m" : "\x1b[42mPassed\x1b[0m");
+        }
         std::cout << test.name << std::string(intermediary, '.') << result << "\n";
 
         for (auto&& e: errors) {
-            std::cout << "\t\x1b[31m" << e << "\x1b[0m\n";
+            if (ci) {
+                std::cout << "\t\x1b[31m" << e << "\x1b[0m\n";
+            } else {
+                std::cout << "\t" << e << "\n";
+            } 
         }
 
         if (errors.size()) { fail_counter++; } 
@@ -87,9 +99,12 @@ void onetest_exec(std::span<const Test> tests) {
     }
 
     const int line_size = (79 - msg.size()) / 2;
-    const std::string color = fail_counter ? "\x1b[31m" : "\x1b[32m"; 
+    std::string color = fail_counter ? "\x1b[31m" : "\x1b[32m"; 
+    std::string reset = "\x1b[0m"; 
+    if (ci) { color = ""; }
+    if (ci) { reset = ""; }
 
-    std::cout << color << std::string(line_size + !(msg.size() % 2), '=') << msg << std::string(line_size, '=') << "\x1b[0m\n";
+    std::cout << color << std::string(line_size + !(msg.size() % 2), '=') << msg << std::string(line_size, '=') << reset << "\n";
     return; 
 } 
 
