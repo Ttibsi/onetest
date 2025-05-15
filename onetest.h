@@ -18,7 +18,7 @@ struct Test {
 };
 
 extern std::vector<std::string> errors;
-void onetest_exec(std::span<const Test>);
+int onetest_exec(std::span<const Test>);
 
 template <typename T>
 int assert_eq(T x, T y, ssl_t loc = std::source_location::current());
@@ -54,7 +54,7 @@ int assert_ne(T x, T y, ssl_t loc) {
     return 0;
 }
 
-void onetest_exec(std::span<const Test> tests) {
+int onetest_exec(std::span<const Test> tests) {
     bool ci = (std::getenv("CI") != nullptr);
     int fail_counter = 0;
     auto start = std::chrono::steady_clock::now();
@@ -113,7 +113,7 @@ void onetest_exec(std::span<const Test> tests) {
 
     std::cout << color << std::string(line_size + !(msg.size() % 2), '=') << msg
               << std::string(line_size, '=') << reset << "\n";
-    return;
+    return fail_counter;
 }
 
 #endif  // ONETEST_IMPLEMENTATION
