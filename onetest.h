@@ -1,5 +1,6 @@
 #ifndef ONETEST_H
 #define ONETEST_H
+#include <format>
 #include <functional>
 #include <source_location>
 #include <span>
@@ -21,21 +22,7 @@ extern std::vector<std::string> errors;
 int onetest_exec(std::span<const Test>);
 
 template <typename T>
-int assert_eq(T x, T y, ssl_t loc = std::source_location::current());
-
-template <typename T>
-int assert_ne(T x, T y, ssl_t loc = std::source_location::current());
-
-#ifdef ONETEST_IMPLEMENTATION
-#include <chrono>
-#include <cstdlib>
-#include <format>
-#include <iostream>
-
-std::vector<std::string> errors;
-
-template <typename T>
-int assert_eq(T x, T y, ssl_t loc) {
+inline int assert_eq(T x, T y, ssl_t loc = std::source_location::current()) {
     if (x != y) {
         errors.push_back(
             std::format("{}:{} - {} does not equal {}", loc.function_name(), loc.line(), x, y));
@@ -45,7 +32,7 @@ int assert_eq(T x, T y, ssl_t loc) {
 }
 
 template <typename T>
-int assert_ne(T x, T y, ssl_t loc) {
+inline int assert_ne(T x, T y, ssl_t loc = std::source_location::current()) {
     if (x == y) {
         errors.push_back(
             std::format("{}:{} - {} is equal to {}", loc.function_name(), loc.line(), x, y));
@@ -53,6 +40,13 @@ int assert_ne(T x, T y, ssl_t loc) {
     }
     return 0;
 }
+
+#ifdef ONETEST_IMPLEMENTATION
+#include <chrono>
+#include <cstdlib>
+#include <iostream>
+
+std::vector<std::string> errors;
 
 int onetest_exec(std::span<const Test> tests) {
     bool ci = (std::getenv("CI") != nullptr);
