@@ -1,114 +1,285 @@
 #ifndef ONETEST_H
 #define ONETEST_H
-#include <format>
-#include <functional>
-#include <source_location>
-#include <span>
-#include <string>
-#include <vector>
 
-#define call(f) {f, #f}
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
-using ssl_t = std::source_location;
-using test_t = std::function<int(void)>;
-struct Test {
-    test_t ptr;
-    std::string name;
+#define ONETEST_MAX_ERRORS 32
+#define ONETEST_MAX_ERROR_LEN 256
+#define ONETEST_MAX_TESTS 128
 
-    Test(test_t t, std::string n) : ptr(t), name(n) {}
-};
+/* Macro to create test entries */
+#define ONETEST_TEST(func) {func, #func}
 
-extern std::vector<std::string> errors;
-int onetest_exec(std::span<const Test>);
+/* Test function pointer type */
+typedef int (*onetest_func_t)(void);
 
-template <typename T>
-inline int assert_eq(T x, T y, ssl_t loc = std::source_location::current()) {
+/* Test structure */
+typedef struct {
+    onetest_func_t func;
+    const char* name;
+} onetest_test_t;
+
+/* Error storage */
+extern char onetest_errors[ONETEST_MAX_ERRORS][ONETEST_MAX_ERROR_LEN];
+extern int onetest_error_count;
+
+/* Main execution function */
+int onetest_exec(const onetest_test_t* tests, int test_count);
+
+/* Internal assert implementations */
+static inline void onetest_assert_eq_int_impl(int x, int y) {
     if (x != y) {
-        errors.push_back(
-            std::format("{}:{} - {} does not equal {}", loc.function_name(), loc.line(), x, y));
-        return 1;
+        snprintf(onetest_errors[onetest_error_count], ONETEST_MAX_ERROR_LEN,
+                "%s:%d - %d does not equal %d", __FUNCTION__, __LINE__, x, y);
+        onetest_error_count++;
+        if (onetest_error_count >= ONETEST_MAX_ERRORS) onetest_error_count = ONETEST_MAX_ERRORS - 1;
     }
-    return 0;
 }
 
-template <typename T>
-inline int assert_ne(T x, T y, ssl_t loc = std::source_location::current()) {
+static inline void onetest_assert_ne_int_impl(int x, int y) {
     if (x == y) {
-        errors.push_back(
-            std::format("{}:{} - {} is equal to {}", loc.function_name(), loc.line(), x, y));
-        return 1;
+        snprintf(onetest_errors[onetest_error_count], ONETEST_MAX_ERROR_LEN,
+                "%s:%d - %d is equal to %d", __FUNCTION__, __LINE__, x, y);
+        onetest_error_count++;
+        if (onetest_error_count >= ONETEST_MAX_ERRORS) onetest_error_count = ONETEST_MAX_ERRORS - 1;
     }
-    return 0;
 }
+
+static inline void onetest_assert_eq_float_impl(double x, double y) {
+    if (x != y) {
+        snprintf(onetest_errors[onetest_error_count], ONETEST_MAX_ERROR_LEN,
+                "%s:%d - %g does not equal %g", __FUNCTION__, __LINE__, x, y);
+        onetest_error_count++;
+        if (onetest_error_count >= ONETEST_MAX_ERRORS) onetest_error_count = ONETEST_MAX_ERRORS - 1;
+    }
+}
+
+static inline void onetest_assert_ne_float_impl(double x, double y) {
+    if (x == y) {
+        snprintf(onetest_errors[onetest_error_count], ONETEST_MAX_ERROR_LEN,
+                "%s:%d - %g is equal to %g", __FUNCTION__, __LINE__, x, y);
+        onetest_error_count++;
+        if (onetest_error_count >= ONETEST_MAX_ERRORS) onetest_error_count = ONETEST_MAX_ERRORS - 1;
+    }
+}
+
+static inline void onetest_assert_eq_char_impl(char x, char y) {
+    if (x != y) {
+        snprintf(onetest_errors[onetest_error_count], ONETEST_MAX_ERROR_LEN,
+                "%s:%d - '%c' does not equal '%c'", __FUNCTION__, __LINE__, x, y);
+        onetest_error_count++;
+        if (onetest_error_count >= ONETEST_MAX_ERRORS) onetest_error_count = ONETEST_MAX_ERRORS - 1;
+    }
+}
+
+static inline void onetest_assert_ne_char_impl(char x, char y) {
+    if (x == y) {
+        snprintf(onetest_errors[onetest_error_count], ONETEST_MAX_ERROR_LEN,
+                "%s:%d - '%c' is equal to '%c'", __FUNCTION__, __LINE__, x, y);
+        onetest_error_count++;
+        if (onetest_error_count >= ONETEST_MAX_ERRORS) onetest_error_count = ONETEST_MAX_ERRORS - 1;
+    }
+}
+
+static inline void onetest_assert_eq_str_impl(const char* x, const char* y) {
+    if (strcmp(x, y) != 0) {
+        snprintf(onetest_errors[onetest_error_count], ONETEST_MAX_ERROR_LEN,
+                "%s:%d - \"%s\" does not equal \"%s\"", __FUNCTION__, __LINE__, x, y);
+        onetest_error_count++;
+        if (onetest_error_count >= ONETEST_MAX_ERRORS) onetest_error_count = ONETEST_MAX_ERRORS - 1;
+    }
+}
+
+static inline void onetest_assert_ne_str_impl(const char* x, const char* y) {
+    if (strcmp(x, y) == 0) {
+        snprintf(onetest_errors[onetest_error_count], ONETEST_MAX_ERROR_LEN,
+                "%s:%d - \"%s\" is equal to \"%s\"", __FUNCTION__, __LINE__, x, y);
+        onetest_error_count++;
+        if (onetest_error_count >= ONETEST_MAX_ERRORS) onetest_error_count = ONETEST_MAX_ERRORS - 1;
+    }
+}
+
+/* Generic assert macros using _Generic (C23) */
+#define onetest_assert_eq(x, y) \
+    _Generic((x), \
+        int: onetest_assert_eq_int_impl, \
+        long: onetest_assert_eq_int_impl, \
+        long long: onetest_assert_eq_int_impl, \
+        unsigned int: onetest_assert_eq_int_impl, \
+        unsigned long: onetest_assert_eq_int_impl, \
+        unsigned long long: onetest_assert_eq_int_impl, \
+        short: onetest_assert_eq_int_impl, \
+        unsigned short: onetest_assert_eq_int_impl, \
+        char: onetest_assert_eq_char_impl, \
+        signed char: onetest_assert_eq_char_impl, \
+        unsigned char: onetest_assert_eq_char_impl, \
+        float: onetest_assert_eq_float_impl, \
+        double: onetest_assert_eq_float_impl, \
+        long double: onetest_assert_eq_float_impl, \
+        char*: onetest_assert_eq_str_impl, \
+        const char*: onetest_assert_eq_str_impl \
+    )(x, y)
+
+#define onetest_assert_ne(x, y) \
+    _Generic((x), \
+        int: onetest_assert_ne_int_impl, \
+        long: onetest_assert_ne_int_impl, \
+        long long: onetest_assert_ne_int_impl, \
+        unsigned int: onetest_assert_ne_int_impl, \
+        unsigned long: onetest_assert_ne_int_impl, \
+        unsigned long long: onetest_assert_ne_int_impl, \
+        short: onetest_assert_ne_int_impl, \
+        unsigned short: onetest_assert_ne_int_impl, \
+        char: onetest_assert_ne_char_impl, \
+        signed char: onetest_assert_ne_char_impl, \
+        unsigned char: onetest_assert_ne_char_impl, \
+        float: onetest_assert_ne_float_impl, \
+        double: onetest_assert_ne_float_impl, \
+        long double: onetest_assert_ne_float_impl, \
+        char*: onetest_assert_ne_str_impl, \
+        const char*: onetest_assert_ne_str_impl \
+    )(x, y)
+
+#define onetest_assert_true(x) \
+    do { \
+        if (!(x)) { \
+            snprintf(onetest_errors[onetest_error_count], ONETEST_MAX_ERROR_LEN, \
+                    "%s:%d - assertion failed: %s", __FUNCTION__, __LINE__, #x); \
+            onetest_error_count++; \
+            if (onetest_error_count >= ONETEST_MAX_ERRORS) onetest_error_count = ONETEST_MAX_ERRORS - 1; \
+        } \
+    } while(0)
+
+#define onetest_assert_false(x) \
+    do { \
+        if ((x)) { \
+            snprintf(onetest_errors[onetest_error_count], ONETEST_MAX_ERROR_LEN, \
+                    "%s:%d - assertion failed: !(%s)", __FUNCTION__, __LINE__, #x); \
+            onetest_error_count++; \
+            if (onetest_error_count >= ONETEST_MAX_ERRORS) onetest_error_count = ONETEST_MAX_ERRORS - 1; \
+        } \
+    } while(0)
 
 #ifdef ONETEST_IMPLEMENTATION
-#include <chrono>
-#include <cstdlib>
-#include <iostream>
 
-std::vector<std::string> errors;
+/* Global error storage */
+char onetest_errors[ONETEST_MAX_ERRORS][ONETEST_MAX_ERROR_LEN];
+int onetest_error_count = 0;
 
-int onetest_exec(std::span<const Test> tests) {
-    bool ci = (std::getenv("CI") != nullptr);
+/* Check if running in CI environment */
+static int onetest_is_ci(void) {
+    return getenv("CI") != NULL;
+}
+
+/* Get current time in milliseconds */
+static double onetest_get_time_ms(void) {
+    clock_t c = clock();
+    return ((double)c / CLOCKS_PER_SEC) * 1000.0;
+}
+
+int onetest_exec(const onetest_test_t* tests, int test_count) {
+    int ci = onetest_is_ci();
     int fail_counter = 0;
-    auto start = std::chrono::steady_clock::now();
-    for (auto&& test : tests) {
-        errors.clear();
-        errors.reserve(8);
-
-        test.ptr();
-
-        const int intermediary = 79 - 6 - test.name.size();
-        std::string result;
-        if (ci) {
-            result = (errors.size() ? "Failed" : "Passed");
-        } else {
-            result = (errors.size() ? "\x1b[41mFailed\x1b[0m" : "\x1b[42mPassed\x1b[0m");
+    double start_time = onetest_get_time_ms();
+    
+    for (int i = 0; i < test_count; i++) {
+        /* Clear errors for this test */
+        onetest_error_count = 0;
+        memset(onetest_errors, 0, sizeof(onetest_errors));
+        
+        /* Run the test */
+        tests[i].func();
+        
+        /* Calculate padding for output formatting */
+        int name_len = strlen(tests[i].name);
+        int padding = 79 - 6 - name_len;
+        if (padding < 0) padding = 0;
+        
+        /* Print test name and dots */
+        printf("%s", tests[i].name);
+        for (int j = 0; j < padding; j++) {
+            printf(".");
         }
-        std::cout << test.name << std::string(intermediary, '.') << result << "\n";
-
-        for (auto&& e : errors) {
+        
+        /* Print result */
+        if (onetest_error_count > 0) {
             if (ci) {
-                std::cout << "\t\x1b[31m" << e << "\x1b[0m\n";
+                printf("Failed\n");
             } else {
-                std::cout << "\t" << e << "\n";
+                printf("\x1b[41mFailed\x1b[0m\n");
+            }
+        } else {
+            if (ci) {
+                printf("Passed\n");
+            } else {
+                printf("\x1b[42mPassed\x1b[0m\n");
             }
         }
-
-        if (errors.size()) {
+        
+        /* Print errors */
+        for (int j = 0; j < onetest_error_count; j++) {
+            if (ci) {
+                printf("\t%s\n", onetest_errors[j]);
+            } else {
+                printf("\t\x1b[31m%s\x1b[0m\n", onetest_errors[j]);
+            }
+        }
+        
+        if (onetest_error_count > 0) {
             fail_counter++;
         }
     }
-
-    const auto runtime = std::chrono::steady_clock::now() - start;
-    const auto duration = std::chrono::duration<double, std::milli>(runtime).count();
-
-    std::string msg;
+    
+    /* Calculate runtime */
+    double end_time = onetest_get_time_ms();
+    double duration = end_time - start_time;
+    
+    /* Format summary message */
+    char msg[128];
     switch (fail_counter) {
         case 0:
-            msg = std::format(" All tests passed in {:.2f}ms ", duration);
+            snprintf(msg, sizeof(msg), " All tests passed in %.2fms ", duration);
             break;
         case 1:
-            msg = std::format(" 1 test failed in {:.2f}ms ", duration);
+            snprintf(msg, sizeof(msg), " 1 test failed in %.2fms ", duration);
             break;
         default:
-            msg = std::format(" {} tests failed in {:.2f}ms ", fail_counter, duration);
+            snprintf(msg, sizeof(msg), " %d tests failed in %.2fms ", fail_counter, duration);
     }
-
-    const int line_size = (79 - msg.size()) / 2;
-    std::string color = fail_counter ? "\x1b[31m" : "\x1b[32m";
-    std::string reset = "\x1b[0m";
+    
+    /* Print summary line */
+    int msg_len = strlen(msg);
+    int line_size = (79 - msg_len) / 2;
+    
+    const char* color = fail_counter ? "\x1b[31m" : "\x1b[32m";
+    const char* reset = "\x1b[0m";
     if (ci) {
         color = "";
-    }
-    if (ci) {
         reset = "";
     }
-
-    std::cout << color << std::string(line_size + !(msg.size() % 2), '=') << msg
-              << std::string(line_size, '=') << reset << "\n";
+    
+    printf("%s", color);
+    
+    /* Print left side equals */
+    int left_equals = line_size + (msg_len % 2 ? 0 : 1);
+    for (int i = 0; i < left_equals; i++) {
+        printf("=");
+    }
+    
+    printf("%s", msg);
+    
+    /* Print right side equals */
+    for (int i = 0; i < line_size; i++) {
+        printf("=");
+    }
+    
+    printf("%s\n", reset);
+    
     return fail_counter;
 }
 
-#endif  // ONETEST_IMPLEMENTATION
-#endif  // ONETEST_H
+#endif /* ONETEST_IMPLEMENTATION */
+#endif /* ONETEST_H */

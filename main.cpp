@@ -1,5 +1,5 @@
 #define ONETEST_IMPLEMENTATION
-#include "onetest.h"
+#include "onetest.hpp"
 
 int test_foo() {
     assert_eq<int>(1, 1);
